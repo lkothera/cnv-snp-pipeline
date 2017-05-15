@@ -85,7 +85,7 @@ def read_compare(
 			col = column+4
 
 			# get sample name and group
-			sample = line_elems[0].lower()
+			sample = line_elems[0]
 			group = line_elems[col]
 
 			compare_dict[sample] = int(group)
@@ -133,6 +133,7 @@ def main():
 		for call in record.samples:
 			# extract sample name
 			sample_name = call.sample.split(".")[0]
+			#print(sample_name)
 			if compare_dict[sample_name] == 0:
 				# sample not included in comparison
 				continue
