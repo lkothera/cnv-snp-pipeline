@@ -36,8 +36,11 @@ cat ${BASE_REFERENCE}/supercontigs_uniq.txt | xargs --verbose -n 1 -I % sh -c "s
 # generate probes file for conifer
 #grep `cat ${BASE_REFERENCE}/gene_names_for_grep.txt ` ${BASE_REFERENCE}/${REFERENCE}-exons.gtf | awk '{print $1"\t"$4"\t"$5"\t"$10}' > ${BASE_REFERENCE}/probes_step1.txt
 cat ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf | awk '{print $1"\t"$4"\t"$5"\t"$10}' > ${BASE_REFERENCE}/probes_step1.txt
+cat ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf | awk '{print $1"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$10"\t"$12"\t"$14}' > ${BASE_REFERENCE}/probes_full_step1.txt
 echo "chr	start	stop	name" > ${BASE_REFERENCE}/probes_step2.txt
-cat ${BASE_REFERENCE}/probes_step1.txt | sed 's/\"\(.*\)\";/\1/' >> ${BASE_REFERENCE}/probes_step2.txt
+#cat ${BASE_REFERENCE}/probes_step1.txt | sed 's/\"\(.*\)\";/\1/' >> ${BASE_REFERENCE}/probes_step2.txt
+cat ${BASE_REFERENCE}/probes_step1.txt | perl -pe 's/"(.*)";/\1/' >> ${BASE_REFERENCE}/probes_step2.txt
+cat ${BASE_REFERENCE}/probes_full_step1.txt | perl -pe 's/"(.*?)";/\1/g' > ${BASE_REFERENCE}/probes_full_step2.txt
 
 # combine supercontigs and remap probe coordinates
 ${BASE}/scripts/generate_single_contig.py --in_fasta ${BASE_REFERENCE}/bwa/supercontigs.fa --out_fasta ${BASE_REFERENCE}/bwa/supercontigs_combined.fa --in_probe ${BASE_REFERENCE}/probes_step2.txt --out_probe ${BASE_REFERENCE}/probes_final.txt --out_gene ${BASE_REFERENCE}/gene_coords.txt
@@ -46,10 +49,10 @@ ${BASE}/scripts/generate_single_contig.py --in_fasta ${BASE_REFERENCE}/bwa/super
 seqtk seq -l 100 ${BASE_REFERENCE}/bwa/supercontigs_combined.fa > ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
 
 # create bwa index
-bwa index ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
+#bwa index ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
 
 # create tmap index
-tmap index -f ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
+#tmap index -f ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
 
 # index fasta file
 samtools faidx ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa

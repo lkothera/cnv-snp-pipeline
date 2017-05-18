@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # general variables
-BASE=/scicomp/home/ktr2/Projects/Mosquito4_update/cnv-snp-pipeline
+BASE=/scicomp/home/ktr2/Projects/mosquito/code/cnv-snp-pipeline
 REFERENCE=culex
 SAMPLES=culex
 
