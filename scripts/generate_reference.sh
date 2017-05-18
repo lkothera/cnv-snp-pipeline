@@ -17,13 +17,14 @@ module load picard/1.128
 module load tmap/3.4.1
 
 # extract only exons from the gtf file
-grep "\sexon\s" ${BASE_REFERENCE}/vectorbase_files/${VBGTF} > ${BASE_REFERENCE}/${REFERENCE}-exons.gtf
+grep "\sCDS\s\|\sstop_codon\s" ${BASE_REFERENCE}/vectorbase_files/${VBGTF} > ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf
 
 # create string for grep OR
-cat ${BASE_REFERENCE}/gene_names.txt | paste -sd"," | sed 's/,/\\|/g' > ${BASE_REFERENCE}/gene_names_for_grep.txt
+#cat ${BASE_REFERENCE}/gene_names.txt | paste -sd"," | sed 's/,/\\|/g' > ${BASE_REFERENCE}/gene_names_for_grep.txt
 
 # get list of unique supercontigs
-grep `cat ${BASE_REFERENCE}/gene_names_for_grep.txt` ${BASE_REFERENCE}/${REFERENCE}-exons.gtf | awk '{print $1}' | sort | uniq > ${BASE_REFERENCE}/supercontigs_uniq.txt
+#grep `cat ${BASE_REFERENCE}/gene_names_for_grep.txt` ${BASE_REFERENCE}/${REFERENCE}-exons.gtf | awk '{print $1}' | sort | uniq > ${BASE_REFERENCE}/supercontigs_uniq.txt
+cat ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf | awk '{print $1}' | sort | uniq > ${BASE_REFERENCE}/supercontigs_uniq.txt
 
 # index fasta file
 samtools faidx ${BASE_REFERENCE}/vectorbase_files/${VBFASTA}
@@ -33,7 +34,8 @@ mkdir -p ${BASE_REFERENCE}/bwa
 cat ${BASE_REFERENCE}/supercontigs_uniq.txt | xargs --verbose -n 1 -I % sh -c "samtools faidx ${BASE_REFERENCE}/vectorbase_files/${VBFASTA} % >> ${BASE_REFERENCE}/bwa/supercontigs.fa"
 
 # generate probes file for conifer
-grep `cat ${BASE_REFERENCE}/gene_names_for_grep.txt ` ${BASE_REFERENCE}/${REFERENCE}-exons.gtf | awk '{print $1"\t"$4"\t"$5"\t"$10}' > ${BASE_REFERENCE}/probes_step1.txt
+#grep `cat ${BASE_REFERENCE}/gene_names_for_grep.txt ` ${BASE_REFERENCE}/${REFERENCE}-exons.gtf | awk '{print $1"\t"$4"\t"$5"\t"$10}' > ${BASE_REFERENCE}/probes_step1.txt
+cat ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf | awk '{print $1"\t"$4"\t"$5"\t"$10}' > ${BASE_REFERENCE}/probes_step1.txt
 echo "chr	start	stop	name" > ${BASE_REFERENCE}/probes_step2.txt
 cat ${BASE_REFERENCE}/probes_step1.txt | sed 's/\"\(.*\)\";/\1/' >> ${BASE_REFERENCE}/probes_step2.txt
 

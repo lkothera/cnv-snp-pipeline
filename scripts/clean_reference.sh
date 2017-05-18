@@ -8,7 +8,7 @@ dos2unix $(dirname "$0")/pipeline.sh
 source $(dirname "$0")/pipeline.sh
 
 # remove files
-rm ${BASE_REFERENCE}/${REFERENCE}-exons.gtf
+rm ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf
 rm ${BASE_REFERENCE}/vectorbase_files/${VBFASTA}.fai
 rm ${BASE_REFERENCE}/gene_names_for_grep.txt
 rm ${BASE_REFERENCE}/probes_final.txt
