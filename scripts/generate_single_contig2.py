@@ -3,6 +3,7 @@
 # -----
 # Title: generate_single_contig.py
 # Author: John Phan (John.Phan@csra.com)
+# Last Modified: 2017/05/19
 # -----
 
 # combine all exons into a single contig and generate a probe file for conifer
@@ -53,13 +54,20 @@ def parse_args():
 		required=True,
 		help='output gene coord file'
 	)
+	parser.add_argument(
+		'--out_gtf',
+		type=str,
+		required=True,
+		help='output new gtf file'
+	)
 	args = parser.parse_args()
 	return (
 		args.in_fasta,
 		args.out_fasta,
 		args.in_probe,
 		args.out_probe,
-		args.out_gene
+		args.out_gene,
+		args.out_gtf
 	)
 
 
@@ -84,7 +92,7 @@ def load_probes(
 		return False
 	
 	# first line is header
-	line = in_probe_file.next()
+	# line = in_probe_file.next()
 
 	# initialize dict data structure
 	super_contigs = {}
@@ -110,9 +118,16 @@ def load_probes(
 					'invalid supercontig name in probe file:'+line_elems[0]
 				)
 				continue
-			start = int(line_elems[1])
-			stop = int(line_elems[2])
-			gene = line_elems[3]
+			probe_type = line_elems[1]
+			start = int(line_elems[2])
+			stop = int(line_elems[3])
+			score = line_elems[4]
+			strand = line_elems[5]
+			frame = int(line_elems[6])
+			gene = line_elems[7]
+			transcript = line_elems[8]
+			exon_num = int(line_elems[9])
+			
 
 			if contig_number not in super_contigs:
 				super_contigs[contig_number] = {}
@@ -120,8 +135,14 @@ def load_probes(
 				super_contigs[contig_number]['probes'] = {}
 			
 			super_contigs[contig_number]['probes'][start] = {
+				'type': probe_type,
 				'stop': stop,
-				'gene': gene
+				'score': score,
+				'strand': strand,
+				'frame': frame,
+				'gene': gene,
+				'transcript': transcript,
+				'exon_num': exon_num
 			}
 			
 	except(StopIteration):
@@ -135,7 +156,8 @@ def generate_single_contig(
 	out_fasta,
 	in_probe,
 	out_probe,
-	out_gene
+	out_gene,
+	out_gtf
 ):
 	super_contigs = load_probes(in_probe)
 	if not super_contigs:
@@ -180,6 +202,20 @@ def generate_single_contig(
 		)
 		print err
 		return False
+
+	# open new output gtf file
+	try:
+		out_gtf_file = open(out_gtf, 'w+')
+	except IOError as err:
+		print (
+			'!error: '
+			'generate_single_contig(): '
+			'cannot open output gtf file: '+out_gtf
+		)
+		print err
+		return False
+	
+
 	# write probe header
 	out_probe_file.write('chr\tstart\tstop\tname\n')
 
@@ -200,12 +236,29 @@ def generate_single_contig(
 			stop_pos = probe['stop']+cur_pos-1
 			gene_name = probe['gene']
 
+			# write probe output for conifer
 			out_probe_file.write(
 				'1\t'+str(start_pos)+
 				'\t'+str(stop_pos)+
 				'\t'+gene_name+
 				'\n'
 			)
+
+			# write new gtf file
+			out_gtf_file.write(
+				'chr1'
+				'\tCombineContigs'
+				'\t'+probe['type']+
+				'\t'+str(start_pos)+
+				'\t'+str(stop_pos)+
+				'\t'+probe['score']+
+				'\t'+probe['strand']+
+				'\t'+str(probe['frame'])+
+				'\tgene_id "'+probe['gene']+'"; '
+				'transcript_id "'+probe['transcript']+'"; '
+				'exon_number "'+str(probe['exon_num'])+'";\n'
+			)
+
 			if gene_name not in gene_coords:
 				gene_coords[gene_name] = {}
 				gene_coords[gene_name]['start'] = start_pos
@@ -252,10 +305,11 @@ def main():
 		out_fasta,
 		in_probe,
 		out_probe,
-		out_gene
+		out_gene,
+		out_gtf
 	) = parse_args()
 
-	if not generate_single_contig(in_fasta, out_fasta, in_probe, out_probe, out_gene):
+	if not generate_single_contig(in_fasta, out_fasta, in_probe, out_probe, out_gene, out_gtf):
 		print (
 			'!error: '
 			'generate_single_contig() failed'

@@ -9,12 +9,13 @@ source $(dirname "$0")/pipeline.sh
 
 # remove files
 rm -f ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf
+rm -f ${BASE_REFERENCE}/${REFERENCE}-combined.gtf
 rm -f ${BASE_REFERENCE}/vectorbase_files/${VBFASTA}.fai
 #rm -f ${BASE_REFERENCE}/gene_names_for_grep.txt
 rm -f ${BASE_REFERENCE}/probes_final.txt
-rm -f ${BASE_REFERENCE}/probes_step1.txt
+#rm -f ${BASE_REFERENCE}/probes_step1.txt
 rm -f ${BASE_REFERENCE}/probes_full_step1.txt
-rm -f ${BASE_REFERENCE}/probes_step2.txt
+#rm -f ${BASE_REFERENCE}/probes_step2.txt
 rm -f ${BASE_REFERENCE}/probes_full_step2.txt
 rm -f ${BASE_REFERENCE}/gene_coords.txt
 rm -f ${BASE_REFERENCE}/bwa/supercontigs.fa*
