@@ -17,7 +17,8 @@ BASE_SAMPLES=${BASE}/samples/${SAMPLES}
 
 # variables for conifer
 RUN_NAME=run-culex
-BWA_REFERENCE=${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
+BWA_REFERENCE_CONIFER=${BASE_REFERENCE}/bwa/supercontigs_combined_formatted_conifer.fa
+BWA_REFERENCE_GATK=${BASE_REFERENCE}/bwa/supercontigs_combined_formatted_gatk.fa
 
 # variables for feature selection
 COMPARE=ResistancePhenos_QonlyAsOf11-8-16.txt

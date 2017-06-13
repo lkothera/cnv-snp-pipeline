@@ -10,6 +10,7 @@
 
 
 import os
+import re
 import glob
 import sys
 import argparse
@@ -17,6 +18,8 @@ from pprint import pprint
 from subprocess import (PIPE, Popen)
 import vcf
 import scipy.stats as stats
+from Bio import SeqIO
+from sortedcontainers import SortedDict
 
 def parse_args():
 	# parse command line arguments and return
@@ -42,11 +45,25 @@ def parse_args():
 		required=True,
 		help='column in compare file to extract groupings'
 	)
+	parser.add_argument(
+		'--fasta',
+		type=str,
+		required=True,
+		help='reference fasta file'
+	)
+	parser.add_argument(
+		'--gtf',
+		type=str,
+		required=True,
+		help='probe gtf file'
+	)
 	args = parser.parse_args()
 	return (
 		args.vcf,
 		args.compare,
-		args.column
+		args.column,
+		args.fasta,
+		args.gtf
 	)
 
 
@@ -94,12 +111,89 @@ def read_compare(
 
 	return compare_dict	
 
+def load_gtf(
+	gtf_path
+):
+
+	# open gtf file
+	try:
+		gtf_file = open(gtf_path, 'rU')
+	except IOError as err:
+		print (
+			'!error: '
+			'load_gtf(): '
+			'cannot open gtf file: '+gtf_path
+		)
+		print err
+		return False
+
+	# initialize dict data structure
+	gtf = {}
+	genes = {}
+	try:
+		while True:
+			line = gtf_file.next().strip()
+			line_elems = re.split(r'\t', line)
+			contig = line_elems[0]
+			start = int(line_elems[3])
+			stop = int(line_elems[4])
+			properties = line_elems[8]
+
+			regex = re.compile(r"gene_id \"(.*?)\"; transcript_id \"(.*?)\"; exon_number \"(.*?)\";")
+			matches = regex.search(properties).groups()
+			gene_id = matches[0]
+			transcript_id = matches[1]
+			exon_number = matches[2]
+
+			#print(contig+', '+str(start)+', '+str(stop)+', '+gene_id+', '+transcript_id+', '+exon_number)
+			if contig not in gtf:
+				gtf[contig] = SortedDict()
+
+			gtf[contig][start] = {
+				'stop': stop,
+				'gene_id': gene_id,
+				'transcript_id': transcript_id,
+				'exon_number': exon_number
+			}
+
+			# keep track of gene start/stop
+			if gene_id not in genes:
+				genes[gene_id] = {
+					'start': start,
+					'stop': stop,
+					'contig': contig
+				}
+			else:
+				if start < genes[gene_id]['start']:
+					genes[gene_id]['start'] = start
+				if stop > genes[gene_id]['stop']:
+					genes[gene_id]['stop'] = stop
+
+	except(StopIteration):
+		gtf_file.close()
+
+	# create sorted dict for gene start/stop
+	genes_sorted = {}
+	for gene_id in genes:
+		contig = genes[gene_id]['contig']
+		if contig not in genes_sorted:
+			genes_sorted[contig] = SortedDict()
+		genes_sorted[contig][genes[gene_id]['start']] = {
+			'gene_id': gene_id,
+			'stop': genes[gene_id]['stop']
+		}
+
+	return (gtf, genes_sorted)
+
+
 
 def main():
 	(
 		vcf_path,
 		compare,
-		column
+		column,
+		fasta,
+		gtf
 	) = parse_args()
 
 	compare_dict = read_compare(compare, column)
@@ -111,9 +205,16 @@ def main():
 		)
 		sys.exit(1)
 
-	#pprint(compare_dict)
 
-	print "ID\tPOS\tREF\tALT\t# Called\t# Heterozygous\t# Homozygous Alt. Allele\t# Homozygous Ref. Allele\t# Ref. Susceptible (Group 1)\t# Ref. Resistant (Group 2)\t# Alt. Susceptible (Group 1)\t# Alt. Resistant (Group 2)\tP-Val., Fisher Exact\tFE Statistic\tOdds Ratio\tAlt. Susceptible Samples\tAlt. Resistant Samples"
+	# load gtf
+	(gtf_dict, genes_sorted) = load_gtf(gtf)
+
+	
+	# load fasta
+	fasta_dict = SeqIO.index(fasta, 'fasta')
+
+
+	print "ID\tPOS\tGene\tREF\tALT\tCodon\tAlt. Codon\tCodon Pos.\t# Called\t# Heterozygous\t# Homozygous Alt. Allele\t# Homozygous Ref. Allele\t# Ref. Susceptible (Group 1)\t# Ref. Resistant (Group 2)\t# Alt. Susceptible (Group 1)\t# Alt. Resistant (Group 2)\tP-Val., Fisher Exact\tFE Statistic\tOdds Ratio\tAlt. Susceptible Samples\tAlt. Resistant Samples"
 
 	vcf_reader = vcf.Reader(open(vcf_path, 'r'));
 	for record in vcf_reader:
@@ -177,11 +278,56 @@ def main():
 			# p-value will be non-significant anyway
 			stat = 0
 
+		# find corresponding gene
+		gtf_key = record.POS
+		index = gtf_dict[record.CHROM].bisect_left(record.POS)
+		if index == 0:
+			gtf_key = gtf_dict[record.CHROM].iloc[index]
+		else:
+			gtf_key = gtf_dict[record.CHROM].iloc[index-1]
+			
+		if record.POS <= gtf_dict[record.CHROM][gtf_key]['stop']:
+			gene_id = gtf_dict[record.CHROM][gtf_key]['gene_id']
+		else:
+			gene_id = 'Non-CDS'
+
+		if gene_id == 'Non-CDS':
+			# determine if in an intron
+			gene_key = record.POS
+			index = genes_sorted[record.CHROM].bisect_left(record.POS)
+			if index == 0:
+				gene_key = genes_sorted[record.CHROM].iloc[index]
+			else:
+				gene_key = genes_sorted[record.CHROM].iloc[index-1]
+
+			if record.POS <= genes_sorted[record.CHROM][gene_key]['stop']:
+				# append intron gene id
+				gene_id += ' (Intron '+genes_sorted[record.CHROM][gene_key]['gene_id']+')'
+
+		codon_seq = 'N/A'
+		codon_pos = 0
+		codon_alt = 'N/A'
+		if gene_id != 'Non-CDS':
+			fasta_seq = fasta_dict[record.CHROM]
+			codon_start = (record.POS-gtf_key)//3*3+gtf_key
+			codon_pos = (record.POS-gtf_key)%3
+			codon_seq = str(fasta_seq.seq[(codon_start-1):(codon_start+2)].upper())
+
+			# derive alt. codon
+			#codon_alt = codon_seq[:codon_pos]+str(record.ALT[0])+codon_seq[codon_pos+len(str(record.ALT[0])):]
+			codon_alt = ",".join([ codon_seq[:codon_pos]+str(x)+codon_seq[codon_pos+len(str(x)):] for x in record.ALT ])
+			#codon_alt = ",".join([ codon_seq[:codon_pos]+str(x) for x in record.ALT ])
+
+			
 		print (
 			record.CHROM + "\t" +
 			str(record.POS) + "\t" +
+			gene_id + "\t" +
 			record.REF + "\t" +
 			",".join(map(str, record.ALT)) + "\t" +
+			codon_seq + "\t" +
+			codon_alt + "\t" +
+			str(codon_pos+1) + "\t" +
 			str(num_het+num_hom_ref+num_hom_alt) + "\t" +
 			str(num_het) + "\t" +
 			str(num_hom_alt) + "\t" +

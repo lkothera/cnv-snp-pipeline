@@ -21,7 +21,7 @@ mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}
 
 # align samples to reference
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/bam
-${BASE}/scripts/bwa_align.py --in_dir ${BASE}/samples/${SAMPLES}/${FAQCS_DIR}_only --out_dir ${BASE}/pipeline-runs/${RUN_NAME}/bam --ext fastq --database ${BWA_REFERENCE}
+${BASE}/scripts/bwa_align.py --in_dir ${BASE}/samples/${SAMPLES}/${FAQCS_DIR}_only --out_dir ${BASE}/pipeline-runs/${RUN_NAME}/bam --ext fastq --database ${BWA_REFERENCE_CONIFER}
 
 # index bam files
 ls ${BASE}/pipeline-runs/${RUN_NAME}/bam | grep '.bam$' | sed 's/\(.*\)\.bam/\1/' | xargs --verbose -n 1 -I % sh -c "samtools index ${BASE}/pipeline-runs/${RUN_NAME}/bam/%.bam"
@@ -32,17 +32,17 @@ ls ${BASE}/pipeline-runs/${RUN_NAME}/bam | grep '.bam$' | sed 's/\(.*\)\.bam/\1/
 
 # plot coverage
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/coverage
-R --no-save --args ${BASE}/reference/${REFERENCE}/gene_coords.txt ${BASE}/samples/${SAMPLES}/sample_names.txt ${BASE}/pipeline-runs/${RUN_NAME}/wgx/ ${BASE}/pipeline-runs/${RUN_NAME}/coverage/ < ${BASE}/scripts/generate_coverage.R
+R --no-save --args ${BASE}/reference/${REFERENCE}/gene_coords_conifer.txt ${BASE}/samples/${SAMPLES}/sample_names.txt ${BASE}/pipeline-runs/${RUN_NAME}/wgx/ ${BASE}/pipeline-runs/${RUN_NAME}/coverage/ < ${BASE}/scripts/generate_coverage.R
 
 ## conifer analysis ----
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/conifer
 
 # -- calculate rpkm
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm
-ls ${BASE}/pipeline-runs/${RUN_NAME}/bam | grep '.bam$' | sed 's/\(.*\)\.bam/\1/' | xargs --verbose -n 1 -I % sh -c "conifer.py rpkm --probes ${BASE}/reference/${REFERENCE}/probes_final.txt --input ${BASE}/pipeline-runs/${RUN_NAME}/bam/%.bam --output ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm/%.rpkm.txt"
+ls ${BASE}/pipeline-runs/${RUN_NAME}/bam | grep '.bam$' | sed 's/\(.*\)\.bam/\1/' | xargs --verbose -n 1 -I % sh -c "conifer.py rpkm --probes ${BASE}/reference/${REFERENCE}/probes_final_conifer.txt --input ${BASE}/pipeline-runs/${RUN_NAME}/bam/%.bam --output ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm/%.rpkm.txt"
 
 # -- analyze probes
-conifer.py analyze --probes ${BASE}/reference/${REFERENCE}/probes_final.txt --rpkm_dir ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm/ --output ${BASE}/pipeline-runs/${RUN_NAME}/conifer/analysis.hdf5 --svd 6 --write_svals ${BASE}/pipeline-runs/${RUN_NAME}/conifer/singular_values.txt --plot_scree ${BASE}/pipeline-runs/${RUN_NAME}/conifer/screeplot.png
+conifer.py analyze --probes ${BASE}/reference/${REFERENCE}/probes_final_conifer.txt --rpkm_dir ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm/ --output ${BASE}/pipeline-runs/${RUN_NAME}/conifer/analysis.hdf5 --svd 6 --write_svals ${BASE}/pipeline-runs/${RUN_NAME}/conifer/singular_values.txt --plot_scree ${BASE}/pipeline-runs/${RUN_NAME}/conifer/screeplot.png
 
 # -- cnv calls
 conifer.py call --threshold 0.5 --input ${BASE}/pipeline-runs/${RUN_NAME}/conifer/analysis.hdf5 --output ${BASE}/pipeline-runs/${RUN_NAME}/conifer/cnv_calls.txt

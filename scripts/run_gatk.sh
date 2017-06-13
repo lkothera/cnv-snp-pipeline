@@ -26,7 +26,7 @@ mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/gatk
 
 # map fastq files to reference
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/gatk/tmap
-${BASE}/scripts/tmap_align.py --in_dir ${BASE}/samples/${SAMPLES}/${FAQCS_DIR}_only --out_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/tmap --base_dir ${BASE} --ext fastq --database ${BWA_REFERENCE} 
+${BASE}/scripts/tmap_align.py --in_dir ${BASE}/samples/${SAMPLES}/${FAQCS_DIR}_only --out_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/tmap --base_dir ${BASE} --ext fastq --database ${BWA_REFERENCE_GATK} 
 
 # run pre_variant script
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/gatk/pre_variant
@@ -34,20 +34,20 @@ ${BASE}/scripts/pre_variant.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/t
 
 # realign indels
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/gatk/indel_realign
-${BASE}/scripts/indel_realign.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/pre_variant --out_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/indel_realign --reference ${BWA_REFERENCE}
+${BASE}/scripts/indel_realign.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/pre_variant --out_dir ${BASE}/pipeline-runs/${RUN_NAME}/gatk/indel_realign --reference ${BWA_REFERENCE_GATK}
 
 # create bam list
 find ${BASE}/pipeline-runs/${RUN_NAME}/gatk/indel_realign | grep rg.bam$ > ${BASE}/pipeline-runs/${RUN_NAME}/gatk/bam.list
 
 # gatk haplotype caller
-GenomeAnalysisTK.sh -T HaplotypeCaller -l INFO -I ${BASE}/pipeline-runs/${RUN_NAME}/gatk/bam.list -stand_call_conf 30 -stand_emit_conf 10 -R ${BWA_REFERENCE} -o ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.vcf -nct 8
+GenomeAnalysisTK.sh -T HaplotypeCaller -l INFO -I ${BASE}/pipeline-runs/${RUN_NAME}/gatk/bam.list -stand_call_conf 30 -stand_emit_conf 10 -R ${BWA_REFERENCE_GATK} -o ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.vcf -nct 8
 
 # extract header from intermediate vcf results
 awk '{if(($1~/#/)) print $0}' ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.vcf > ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.head
 
 # mpileup of all bams
 mkdir -p ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant
-samtools mpileup -f ${BWA_REFERENCE} `find ${BASE}/pipeline-runs/${RUN_NAME}/gatk/indel_realign | grep rg.bam$` > ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.mpileup
+samtools mpileup -f ${BWA_REFERENCE_GATK} `find ${BASE}/pipeline-runs/${RUN_NAME}/gatk/indel_realign | grep rg.bam$` > ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.mpileup
 
 # filter mpileup to remove low depth bases
 cat ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.mpileup | awk '{if($4 >= 10) print $0}' > ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants_filtered.mpileup
@@ -63,7 +63,7 @@ ${BASE}/scripts/pileup_analyse.pl ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_va
 ${BASE}/scripts/filter_indel_bias.pl -vcf ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.vcf -pileup ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.snp.indel -o ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.indel1
 
 # filter homopolymer indels
-${BASE}/scripts/filter_indel_homo2.pl -vcf ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.indel1 -g ${BWA_REFERENCE} -o ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.final.indel
+${BASE}/scripts/filter_indel_homo2.pl -vcf ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.indel1 -g ${BWA_REFERENCE_GATK} -o ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.final.indel
 
 # create final indel vcf
 cat ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.head ${BASE}/pipeline-runs/${RUN_NAME}/gatk/post_variant/variants.final.indel > ${BASE}/pipeline-runs/${RUN_NAME}/gatk/variants.indel.vcf

@@ -188,8 +188,6 @@ def generate_single_contig(
 		)
 		print err
 		return False
-	# write fasta header
-	out_fasta_file.write('>chr1\n')
 
 	# open new output probe file
 	try:
@@ -226,19 +224,24 @@ def generate_single_contig(
 
 	for super_contig in sorted(super_contigs):
 		fasta = fasta_dict[super_contigs[super_contig]['orig_name']]
+		# write fasta header
+		out_fasta_file.write('>chr'+str(super_contig)+'\n')
 		# print sequence to file
-		out_fasta_file.write(str(fasta.seq))
+		out_fasta_file.write(str(fasta.seq)+'\n')
 		# translate probe coords and print to file
 		for probe_start in sorted(super_contigs[super_contig]['probes']):
 			probe = super_contigs[super_contig]['probes'][probe_start]
 
-			start_pos = probe_start+cur_pos-1
-			stop_pos = probe['stop']+cur_pos-1
+			#start_pos = probe_start+cur_pos-1
+			start_pos = probe_start
+			#stop_pos = probe['stop']+cur_pos-1
+			stop_pos = probe['stop']
 			gene_name = probe['gene']
 
 			# write probe output for conifer
 			out_probe_file.write(
-				'1\t'+str(start_pos)+
+				str(super_contig)+
+				'\t'+str(start_pos)+
 				'\t'+str(stop_pos)+
 				'\t'+gene_name+
 				'\n'
@@ -246,7 +249,7 @@ def generate_single_contig(
 
 			# write new gtf file
 			out_gtf_file.write(
-				'chr1'
+				'chr'+str(super_contig)+
 				'\tCombineContigs'
 				'\t'+probe['type']+
 				'\t'+str(start_pos)+
