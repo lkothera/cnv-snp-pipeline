@@ -61,3 +61,10 @@ ${BASE}/scripts/combine_exports.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/co
 # -- combine exports, combine all exons for each gene
 ${BASE}/scripts/combine_gene_exports.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/conifer/export --out ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_cnv_gene_features.txt
 
+# -- combine rpkm values
+${BASE}/scripts/combine_rpkms.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm --combined_exports_file ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_cnv_features.txt --probes_file ${BASE}/reference/${REFERENCE}/probes_final_conifer.txt --out ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_rpkm_features.txt --out_gene ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_rpkm_gene_features.txt --log=false
+
+# -- combine rpkm log2 values
+${BASE}/scripts/combine_rpkms.py --in_dir ${BASE}/pipeline-runs/${RUN_NAME}/conifer/rpkm --combined_exports_file ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_cnv_features.txt --probes_file ${BASE}/reference/${REFERENCE}/probes_final_conifer.txt --out ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_rpkm_log_features.txt --out_gene ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_rpkm_log_gene_features.txt --log=true
+
+
