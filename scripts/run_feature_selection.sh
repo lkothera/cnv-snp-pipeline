@@ -42,7 +42,16 @@ ${BASE}/scripts/extract_label_samples.py --data_path ${BASE}/pipeline-runs/${RUN
 
 ${BASE}/scripts/extract_label_samples.py --data_path ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_cnv_gene_features.txt --label_path ${BASE}/samples/${SAMPLES}/${COMPARE} --column ${COLUMN} > ${BASE}/pipeline-runs/${RUN_NAME}/features/cnv_gene_values_${NAME}_labeled.txt
 
+${BASE}/scripts/extract_label_samples.py --data_path ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_rpkm_log_features.txt --label_path ${BASE}/samples/${SAMPLES}/${COMPARE} --column ${COLUMN} > ${BASE}/pipeline-runs/${RUN_NAME}/features/rpkm_log_values_${NAME}_labeled.txt
+
+${BASE}/scripts/extract_label_samples.py --data_path ${BASE}/pipeline-runs/${RUN_NAME}/conifer/combined_rpkm_log_gene_features.txt --label_path ${BASE}/samples/${SAMPLES}/${COMPARE} --column ${COLUMN} > ${BASE}/pipeline-runs/${RUN_NAME}/features/rpkm_log_gene_values_${NAME}_labeled.txt
+
 # select features
 ${BASE}/bin/mosquito_feature_selection -data_path ${BASE}/pipeline-runs/${RUN_NAME}/features/cnv_values_${NAME}_labeled.txt > ${BASE}/pipeline-runs/${RUN_NAME}/features/cnv_features_${NAME}.txt
 
 ${BASE}/bin/mosquito_feature_selection -data_path ${BASE}/pipeline-runs/${RUN_NAME}/features/cnv_gene_values_${NAME}_labeled.txt > ${BASE}/pipeline-runs/${RUN_NAME}/features/cnv_gene_features_${NAME}.txt
+
+${BASE}/bin/mosquito_rpkm_fc -data_path ${BASE}/pipeline-runs/${RUN_NAME}/features/rpkm_log_values_${NAME}_labeled.txt > ${BASE}/pipeline-runs/${RUN_NAME}/features/rpkm_log_features_${NAME}.txt
+
+${BASE}/bin/mosquito_rpkm_fc -data_path ${BASE}/pipeline-runs/${RUN_NAME}/features/rpkm_log_gene_values_${NAME}_labeled.txt > ${BASE}/pipeline-runs/${RUN_NAME}/features/rpkm_log_gene_features_${NAME}.txt
+
