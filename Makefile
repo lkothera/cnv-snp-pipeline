@@ -9,7 +9,8 @@ samples_clean:
 	./scripts/clean_samples.sh
 
 reference: FORCE
-	./scripts/generate_reference.sh
+	./scripts/generate_reference_conifer.sh
+	./scripts/generate_reference_gatk.sh
 
 reference_clean:
 	./scripts/clean_reference.sh
@@ -31,6 +32,9 @@ gatk_features: FORCE
 
 gatk_clean:
 	./scripts/clean_gatk.sh
+
+lamplink: FORCE
+	./scripts/run_lamplink.sh ${ARGS}
 
 FORCE:
 

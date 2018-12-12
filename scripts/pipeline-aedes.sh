@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # general variables
-BASE=/scicomp/home/ktr2/Projects/Mosquito2
+BASE=/scicomp/home/ktr2/Projects/mosquito/code/cnv-snp-pipeline
 REFERENCE=aedes
 SAMPLES=aedes
 
@@ -17,7 +17,8 @@ BASE_SAMPLES=${BASE}/samples/${SAMPLES}
 
 # variables for conifer
 RUN_NAME=run-aedes
-BWA_REFERENCE=${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa
+BWA_REFERENCE_CONIFER=${BASE_REFERENCE}/bwa/supercontigs_combined_formatted_conifer.fa
+BWA_REFERENCE_GATK=${BASE_REFERENCE}/bwa/supercontigs_combined_formatted_gatk.fa
 
 # variables for feature selection
-COMPARE=ResistancePhenos_QonlyAsOf11-8-16.txt
+COMPARE=PR16_Phenos_update4.txt

@@ -8,16 +8,20 @@ dos2unix $(dirname "$0")/pipeline.sh
 source $(dirname "$0")/pipeline.sh
 
 # remove files
-rm ${BASE_REFERENCE}/${REFERENCE}-exons.gtf
-rm ${BASE_REFERENCE}/vectorbase_files/${VBFASTA}.fai
-rm ${BASE_REFERENCE}/gene_names_for_grep.txt
-rm ${BASE_REFERENCE}/probes_final.txt
-rm ${BASE_REFERENCE}/probes_step1.txt
-rm ${BASE_REFERENCE}/probes_step2.txt
-rm ${BASE_REFERENCE}/gene_coords.txt
-rm ${BASE_REFERENCE}/bwa/supercontigs.fa*
-rm ${BASE_REFERENCE}/bwa/supercontigs_combined.fa*
-rm ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.fa*
-rm ${BASE_REFERENCE}/bwa/supercontigs_combined_formatted.dict
+rm -f ${BASE_REFERENCE}/${REFERENCE}-CDS.gtf
+rm -f ${BASE_REFERENCE}/${REFERENCE}-exons.gtf
+rm -f ${BASE_REFERENCE}/${REFERENCE}-combined_gatk.gtf
+rm -f ${BASE_REFERENCE}/vectorbase_files/${VBFASTA}.fai
+rm -f ${BASE_REFERENCE}/gene_names_for_grep.txt
+rm -f ${BASE_REFERENCE}/probes_final_conifer.txt
+rm -f ${BASE_REFERENCE}/probes_final_gatk.txt
+rm -f ${BASE_REFERENCE}/probes_step1_conifer.txt
+rm -f ${BASE_REFERENCE}/probes_step1_gatk.txt
+rm -f ${BASE_REFERENCE}/probes_step2_conifer.txt
+rm -f ${BASE_REFERENCE}/probes_step2_gatk.txt
+rm -f ${BASE_REFERENCE}/gene_coords_conifer.txt
+rm -f ${BASE_REFERENCE}/gene_coords_gatk.txt
+rm -f ${BASE_REFERENCE}/bwa/*
 rmdir ${BASE_REFERENCE}/bwa
-rm ${BASE_REFERENCE}/supercontigs_uniq.txt
+rm -f ${BASE_REFERENCE}/supercontigs_uniq_conifer.txt
+rm -f ${BASE_REFERENCE}/supercontigs_uniq_gatk.txt
