@@ -33,5 +33,8 @@ gatk_features: FORCE
 gatk_clean:
 	./scripts/clean_gatk.sh
 
+lamplink: FORCE
+	./scripts/run_lamplink.sh ${ARGS}
+
 FORCE:
 
