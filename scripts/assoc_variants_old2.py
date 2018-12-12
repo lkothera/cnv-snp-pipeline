@@ -3,7 +3,7 @@
 # -----
 # Title: assoc_variants.py
 # Author: John Phan (John.Phan@csra.com)
-# Last Modified: 2017/07/27
+# Last Modified: 2017/06/19
 # -----
 
 # associate variants in vcf to groups
@@ -18,10 +18,8 @@ from pprint import pprint
 from subprocess import (PIPE, Popen)
 import vcf
 import scipy.stats as stats
-import statsmodels.api as sm 
 from Bio import SeqIO
 from sortedcontainers import SortedDict
-from string import maketrans
 
 def parse_args():
 	# parse command line arguments and return
@@ -139,8 +137,6 @@ def load_gtf(
 			contig = line_elems[0]
 			start = int(line_elems[3])
 			stop = int(line_elems[4])
-			strand = line_elems[6]
-			frame = int(line_elems[7])
 			properties = line_elems[8]
 
 			regex = re.compile(r"gene_id \"(.*?)\"; transcript_id \"(.*?)\"; exon_number \"(.*?)\";")
@@ -149,6 +145,7 @@ def load_gtf(
 			transcript_id = matches[1]
 			exon_number = matches[2]
 
+			#print(contig+', '+str(start)+', '+str(stop)+', '+gene_id+', '+transcript_id+', '+exon_number)
 			if contig not in gtf:
 				gtf[contig] = SortedDict()
 
@@ -156,8 +153,7 @@ def load_gtf(
 				'stop': stop,
 				'gene_id': gene_id,
 				'transcript_id': transcript_id,
-				'exon_number': exon_number,
-				'frame': frame
+				'exon_number': exon_number
 			}
 
 			# keep track of gene start/stop
@@ -165,8 +161,7 @@ def load_gtf(
 				genes[gene_id] = {
 					'start': start,
 					'stop': stop,
-					'contig': contig,
-					'strand': strand
+					'contig': contig
 				}
 			else:
 				if start < genes[gene_id]['start']:
@@ -188,115 +183,9 @@ def load_gtf(
 			'stop': genes[gene_id]['stop']
 		}
 
-	return (gtf, genes_sorted, genes)
+	return (gtf, genes_sorted)
 
 
-def get_variant_info(
-	gtf_dict,
-	genes_sorted,
-	genes,
-	fasta_dict,
-	vcf_record
-):
-
-	var_pos = vcf_record.POS
-	gtf_key = 0
-	gene_id = ''
-
-	# determine if variant position corresponds to a gene, intron, or integenic region
-	index = gtf_dict[vcf_record.CHROM].bisect_left(var_pos)
-	if index == 0:
-		# variant position is before, or exactly on an exon start location
-		if var_pos in gtf_dict[vcf_record.CHROM]:
-			# variant is exactly on start location
-			gtf_key = gtf_dict[vcf_record.CHROM].iloc[index]
-			gene_id = gtf_dict[vcf_record.CHROM][gtf_key]['gene_id']
-		else:
-			# variant is before, non-cds
-			gene_id = 'Non-CDS'
-	else:
-		# variant position is after exon location
-		gtf_key = gtf_dict[vcf_record.CHROM].iloc[index-1]
-		if var_pos <= gtf_dict[vcf_record.CHROM][gtf_key]['stop']:
-			# if inside of the exon's region
-			gene_id = gtf_dict[vcf_record.CHROM][gtf_key]['gene_id']
-		else:
-			# outside of exon's region
-			gene_id = 'Non-CDS'
-
-	if gene_id == 'Non-CDS':
-		# determine if in an intron, or intergenic region
-		index = genes_sorted[vcf_record.CHROM].bisect_left(var_pos)
-		if index > 0:
-			gene_key = genes_sorted[vcf_record.CHROM].iloc[index-1]
-			if var_pos <= genes_sorted[vcf_record.CHROM][gene_key]['stop']:
-				# append intron gene id
-				gene_id += ' (Intron '+genes_sorted[vcf_record.CHROM][gene_key]['gene_id']+')'
-
-	
-
-	codon_seq = 'N/A'
-	alt_codon_seq = 'N/A'
-	codon_pos = 0
-	pattern = re.compile("^Non-CDS")
-	if not pattern.match(gene_id):
-		# only if coding sequence
-		
-		# extra fasta sequence for entire "chromosome"
-		fasta_seq = fasta_dict[vcf_record.CHROM]
-
-		if genes[gene_id]['strand'] == '+':
-			# if forward strand, calculate codon info from the beginning
-
-			# beginning of first whole codon for this exon
-			cds_start = gtf_key+gtf_dict[vcf_record.CHROM][gtf_key]['frame']
-			# beginning of codon that contains the variant position
-			codon_start = (var_pos-cds_start)//3*3+cds_start
-			# position of the variant in the codon (1-based)
-			codon_pos = (var_pos-cds_start)%3+1
-			# extract codon sequence
-			codon_seq = str(fasta_seq.seq[(codon_start-1):(codon_start+2)].upper())
-			# derive alt. codon
-			if len(vcf_record.REF) > 1:
-				# all alternates are indels
-				alt_codon_seq = '[indel]'
-			else:
-				alt_codon_seq = ','.join([ codon_seq[:codon_pos-1]+str(x)+codon_seq[codon_pos-1+len(str(x)):] if len(str(x)) == 1 else '[indel]' for x in vcf_record.ALT ])
-		else:
-			# if reverse strand, calculate codon from the end
-
-			# beginning of first whole codon for this exon (counted from the end)
-			cds_start = gtf_dict[vcf_record.CHROM][gtf_key]['stop']-gtf_dict[vcf_record.CHROM][gtf_key]['frame']
-			# beginning of codon that contains the variant position
-			codon_start = cds_start-(cds_start-var_pos)//3*3
-			# position of the variant in the codon (1-based)
-			codon_pos = (cds_start-var_pos)%3+1
-			# extract codon sequence
-			codon_seq = str(fasta_seq.seq[(codon_start-3):(codon_start)].upper())
-			# derive alt. codon
-			if len(vcf_record.REF) > 1:
-				# all alternates are indels
-				alt_codon_seq = '[indel]'
-			else:
-				alt_codon_seq = ','.join([ codon_seq[:(3-codon_pos)]+str(x)+codon_seq[(3-codon_pos)+len(str(x)):] if len(str(x)) == 1 else '[indel]' for x in vcf_record.ALT ])
-
-			# reverse complement the codon sequences if not indels
-			codon_seq = codon_seq + ' ('+codon_seq[::-1].translate(maketrans('ATGC','TACG'))+')'
-			alt_codon_seq = (
-				alt_codon_seq + 
-				' (' + 
-					','.join(
-						[ x[::-1].translate(maketrans('ATGC','TACG')) if x != '[indel]' else '[indel]' for x in alt_codon_seq.split(',') ]
-					) +
-				')'
-			)
-
-	return (
-		gene_id,
-		codon_seq,
-		alt_codon_seq,
-		codon_pos
-	) 
 
 def main():
 	(
@@ -318,13 +207,13 @@ def main():
 
 
 	# load gtf
-	(gtf_dict, genes_sorted, genes) = load_gtf(gtf)
+	(gtf_dict, genes_sorted) = load_gtf(gtf)
 
 	
 	# load fasta
 	fasta_dict = SeqIO.index(fasta, 'fasta')
 
-	print "ID\tPOS\tGene\tREF\tALT\tCodon\tAlt. Codon\tCodon Pos.\t# Called\t# Heterozygous\t# Homozygous Alt. Allele\t# Homozygous Ref. Allele\t# Ref. Susceptible (Group 1)\t# Ref. Resistant (Group 2)\t# Heterozygous Alt. Susceptible (Group 1)\t# Homozygous Alt. Susceptible (Group 1)\t# Heterozygous Alt. Resistant (Group 2)\t# Homozygous Alt. Resistant (Group 2)\tP-Val., Fisher Exact (Method 1)\tFE Statistic (Method 1)\tOdds Ratio (Method 1)\tSensitivity (Method 1)\tSpecificity (Method 1)\tAUC (Average Sens,Spec; Method 1)\tAccuracy (Method 1)\tP-Val., Fisher Exact (Method 2)\tFE Statistic (Method 2)\tOdds Ratio (Method 2)\tSensitivity (Method 2)\tSpecificity (Method 2)\tAUC (Average Sens,Spec; Method 2)\tAccuracy (Method 2)\tP-Val., Cochran-Armitage\tCochran-Armitage Statistic\tHeterozygous Alt. Susceptible Samples\tHomozygous Alt. Susceptible Samples\tHeterozygous Alt. Resistant Samples\tHomozygous Alt. Resistant Samples"
+	print "ID\tPOS\tGene\tREF\tALT\tCodon\tAlt. Codon\tCodon Pos.\t# Called\t# Heterozygous\t# Homozygous Alt. Allele\t# Homozygous Ref. Allele\t# Ref. Susceptible (Group 1)\t# Ref. Resistant (Group 2)\t# Heterozygous Alt. Susceptible (Group 1)\t# Homozygous Alt. Susceptible (Group 1)\t# Heterozygous Alt. Resistant (Group 2)\t# Homozygous Alt. Resistant (Group 2)\tP-Val., Fisher Exact (Method 1)\tFE Statistic (Method 1)\tOdds Ratio (Method 1)\tSensitivity (Method 1)\tSpecificity (Method 1)\tAUC (Average Sens,Spec; Method 1)\tAccuracy (Method 1)\tP-Val., Fisher Exact (Method 2)\tFE Statistic (Method 2)\tOdds Ratio (Method 2)\tSensitivity (Method 2)\tSpecificity (Method 2)\tAUC (Average Sens,Spec; Method 2)\tAccuracy (Method 2)\tHeterozygous Alt. Susceptible Samples\tHomozygous Alt. Susceptible Samples\tHeterozygous Alt. Resistant Samples\tHomozygous Alt. Resistant Samples"
 
 	vcf_reader = vcf.Reader(open(vcf_path, 'r'));
 	for record in vcf_reader:
@@ -406,10 +295,6 @@ def main():
 		except ZeroDivisionError:
 			stat2 = 0
 
-		# calculate cochran-armitage test
-		catt_table = sm.stats.Table([[res_ref,sus_ref], [res_alt_het,sus_alt_het], [res_alt_hom,sus_alt_hom]])
-		catt_result = catt_table.test_ordinal_association()
-
 		# sensitivity & specificity using presence/absense of alt alleles as predictor
 		sens1 = 0
 		spec1 = 0
@@ -481,15 +366,47 @@ def main():
 				pass
 
 
-		# lookup corresponding gene and codon info
-		(
-			gene_id,
-			codon_seq,
-			alt_codon_seq,
-			codon_pos
-		) = get_variant_info(gtf_dict, genes_sorted, genes, fasta_dict, record)
+		# find corresponding gene
+		gtf_key = record.POS
+		index = gtf_dict[record.CHROM].bisect_left(record.POS)
+		if index == 0:
+			gtf_key = gtf_dict[record.CHROM].iloc[index]
+		else:
+			gtf_key = gtf_dict[record.CHROM].iloc[index-1]
+			
+		if record.POS <= gtf_dict[record.CHROM][gtf_key]['stop']:
+			gene_id = gtf_dict[record.CHROM][gtf_key]['gene_id']
+		else:
+			gene_id = 'Non-CDS'
 
+		if gene_id == 'Non-CDS':
+			# determine if in an intron
+			gene_key = record.POS
+			index = genes_sorted[record.CHROM].bisect_left(record.POS)
+			if index == 0:
+				gene_key = genes_sorted[record.CHROM].iloc[index]
+			else:
+				gene_key = genes_sorted[record.CHROM].iloc[index-1]
 
+			if record.POS <= genes_sorted[record.CHROM][gene_key]['stop']:
+				# append intron gene id
+				gene_id += ' (Intron '+genes_sorted[record.CHROM][gene_key]['gene_id']+')'
+
+		codon_seq = 'N/A'
+		codon_pos = 0
+		codon_alt = 'N/A'
+		if gene_id != 'Non-CDS':
+			fasta_seq = fasta_dict[record.CHROM]
+			codon_start = (record.POS-gtf_key)//3*3+gtf_key
+			codon_pos = (record.POS-gtf_key)%3
+			codon_seq = str(fasta_seq.seq[(codon_start-1):(codon_start+2)].upper())
+
+			# derive alt. codon
+			#codon_alt = codon_seq[:codon_pos]+str(record.ALT[0])+codon_seq[codon_pos+len(str(record.ALT[0])):]
+			codon_alt = ",".join([ codon_seq[:codon_pos]+str(x)+codon_seq[codon_pos+len(str(x)):] for x in record.ALT ])
+			#codon_alt = ",".join([ codon_seq[:codon_pos]+str(x) for x in record.ALT ])
+
+			
 		print (
 			record.CHROM + "\t" +
 			str(record.POS) + "\t" +
@@ -497,8 +414,8 @@ def main():
 			record.REF + "\t" +
 			",".join(map(str, record.ALT)) + "\t" +
 			codon_seq + "\t" +
-			alt_codon_seq + "\t" +
-			str(codon_pos) + "\t" +
+			codon_alt + "\t" +
+			str(codon_pos+1) + "\t" +
 			str(num_het+num_hom_ref+num_hom_alt) + "\t" +
 			str(num_het) + "\t" +
 			str(num_hom_alt) + "\t" +
@@ -523,8 +440,6 @@ def main():
 			str(spec2) + "\t" +
 			str(auc2) + "\t" +
 			str(acc2) + "\t" +
-			str(catt_result.pvalue) + "\t" +
-			str(catt_result.zscore) + "\t" +
 			",".join(sus_alt_het_list) + "\t" +
 			",".join(sus_alt_hom_list) + "\t" +
 			",".join(res_alt_het_list) + "\t" +
