@@ -66,7 +66,7 @@ Steps to Run the Pipeline
         cd ~/cnv-snp-pipeline/scripts
         vi pipeline.sh
 
-    Substitute the brackets with appropriate values:
+Substitute the brackets with appropriate values:
 
     ::
 
