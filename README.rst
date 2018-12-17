@@ -59,20 +59,24 @@ Steps to Run the Pipeline
 
 7. Copy the list of gene names into a file called "gene_names.txt" within the "reference" folder. This file includes the target list of genes for CNV analysis. 
     
-8. Modify the pipeline configuration file as follows:
+8. Modify the pipeline configuration file:
 
     ::
 
         cd ~/cnv-snp-pipeline/scripts
         vi pipeline.sh
 
-    Set BASE=[your base pipeline directory, i.e., ~/cnv-snp-pipeline]
-    Set SAMPLES=[sample folder name, i.e., culex]
-    Set REFERENCE=[reference folder name, i.e., culex]
-    Set VBGTF=[the name of the VectorBase GTF file]
-    Set VBFASTA=[the name of the VectorBase FASTA file]
-    Set RUN_NAME=[custom name of the analysis run, used for organizing output]
-    Set COMPARE=[name of the comparison text file in the sample directory]
+    Substitute the brackets with appropriate values:
+
+    ::
+
+        BASE=[your base pipeline directory, i.e., ~/cnv-snp-pipeline]
+        SAMPLES=[sample folder name, i.e., culex]
+        REFERENCE=[reference folder name, i.e., culex]
+        VBGTF=[the name of the VectorBase GTF file]
+        VBFASTA=[the name of the VectorBase FASTA file]
+        RUN_NAME=[custom name of the analysis run, used for organizing output]
+        COMPARE=[name of the comparison text file in the sample directory]
 
 9. Build the reference:
 
